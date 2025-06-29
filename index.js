@@ -26,7 +26,7 @@ connectToDb();
 
 //middleware to check token
 
-const authenticate=(req,res,next)=>{
+const checkToken=(req,res,next)=>{
     const token=req.headers['authorization'].split(' ')[1];
     if(!token){
       return res.status(401).json({message:"no token is provided"})
@@ -44,7 +44,7 @@ const authenticate=(req,res,next)=>{
 
 //middleware to check is admin or not
 
-const isAdmin=(req,res,next)=>{
+const checkAdmin=(req,res,next)=>{
   if(!req.user.role==='admin'){
     return res.status(403).json({message:"admin access only"})
   }
@@ -105,6 +105,19 @@ app.post('/api/auth/login',async(req,res)=>{
 })
 
 
+
+
+//userControllers
+
+app.get('/api/user',checkToken,checkAdmin,async(req,res)=>{
+  try{
+  const allUsers=await User.find({role:"user"});
+  return res.status(201).json(allUsers);
+  }
+  catch(error){
+    return res.status(403).json({message:"error while fetching ",error:error.message});
+  }
+})
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
