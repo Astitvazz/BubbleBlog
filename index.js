@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt=require('jsonwebtoken')
 const app = express()
 const User=require('./models/userModel.js')
+const Blog=require('./models/blogModel.js')
 const port = 3000
 app.use(express.json());
 app.get('/', (req, res) => {
@@ -45,7 +46,7 @@ const checkToken=(req,res,next)=>{
 //middleware to check is admin or not
 
 const checkAdmin=(req,res,next)=>{
-  if(!req.user.role==='admin'){
+  if(req.user.role!=='admin'){
     return res.status(403).json({message:"admin access only"})
   }
   next();
@@ -104,7 +105,17 @@ app.post('/api/auth/login',async(req,res)=>{
   }
 })
 
+/*
 
+//database admin------
+{
+  "username":"Astitvazz" ,
+    "email": "astitvasharma58@gmail.com"   ,
+    "password":"astitva123",
+    "role": "admin",
+    "bio":   "I am a backend developer"  ,
+    "avatar": "www.image.com"
+} */
 
 
 //userControllers
@@ -116,6 +127,92 @@ app.get('/api/user',checkToken,checkAdmin,async(req,res)=>{
   }
   catch(error){
     return res.status(403).json({message:"error while fetching ",error:error.message});
+  }
+})
+
+app.get('/api/user/:id',checkToken,async(req,res)=>{
+  try{
+  const myId=req.params.id;
+  const userFound=await User.findById(myId);
+  return res.status(201).json(userFound);
+  }
+  catch(error){
+    return res.status(401).json({message:"Error Occured",error:error.message});
+  }
+
+})
+
+app.delete('/api/user/:id',checkToken,checkAdmin,async(req,res)=>{
+  try{
+  const myId=req.params.id;
+  const userDeleted=await User.deleteOne({_id:myId});
+  return res.status(201).json({message:"User deleted successfully"});
+  }
+  catch(error){
+    return res.status(401).json({message:"something went wrong",error:error.message});
+  }
+})
+//blogControllers
+
+app.post('/api/blog',checkToken,async(req,res)=>{
+  try{
+  const blogData=req.body;
+  const myBlog= new Blog(blogData);
+  await myBlog.save();
+  return res.status(201).json({message:"blog posted successfully"});
+  }
+  catch(error){
+    return res.status(401).json({message:"Failed to post! Try Again",error:error.message});
+  }
+})
+app.get('/api/blog',checkToken,async(req,res)=>{
+  try{
+  const allBlogs=await Blog.find({isApproved:true});
+  res.status(201).json(allBlogs);
+  }
+  catch(error){
+    res.status(401).json({message:"error while fetching the blogs",error:error.message});
+  }
+})
+
+app.get('/api/blog/mine',checkToken,async(req,res)=>{
+  try{
+  const myId=req.user.id;
+  const myBlogs=await Blog.find({author:myId});
+  res.status(201).json(myBlogs);
+  }
+  catch(error){
+    res.status(401).json({message:"error while fetching the blogs",error:error.message});
+  }
+})
+
+
+app.get('/api/blog/:id',checkToken,async(req,res)=>{
+  try{
+  const givenBlog=await Blog.findById(req.params.id);
+  res.status(201).json(givenBlog);
+  }
+  catch(error){
+    res.status(401).json({message:"error while fetching the blog",error:error.message});
+  }
+})
+
+app.put('/api/blog/:id',checkToken,async(req,res)=>{
+  try {
+
+    const givenId=req.user.id;
+    const givenBlog=await Blog.findOne({_id:req.params.id})
+    if(!givenBlog){
+      res.status(403).json({message:"blog not found"})
+    }
+    if(givenBlog.author.toString()!==givenId&&req.user.role!=='admin'){
+      return res.status(403).json({message:"Can't edit other's blog"})
+    }
+    const content=req.body;
+    await Blog.updateOne({_id:req.params.id},content)
+    res.status(201).json({message:"blog updated successfully"})
+  } catch (error) {
+    res.status(401).json({message:"error occured while updating blog"});
   }
 })
 
